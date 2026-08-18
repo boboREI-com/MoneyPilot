@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0f172a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="MoneyPilot">
+<title>MoneyPilot</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Noto Sans TC",sans-serif;background:#f4f7fb;color:#111827}
+.app{max-width:560px;margin:auto;padding:env(safe-area-inset-top) 16px 32px}
+header{padding:28px 4px 18px}h1{margin:0;font-size:30px}header p{margin:5px 0;color:#64748b}
+.card{background:white;border-radius:22px;padding:18px;margin:12px 0;box-shadow:0 6px 24px rgba(15,23,42,.06)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.metric{padding:15px;border-radius:17px;background:#f8fafc}.label{font-size:13px;color:#64748b}.value{font-size:20px;font-weight:750;margin-top:5px}
+h2{font-size:18px;margin:0 0 12px}.row{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid #eef2f7}.row:last-child{border:0}
+button{border:0;border-radius:14px;padding:13px 16px;font-size:16px;font-weight:650;background:#111827;color:white;width:100%;margin-top:8px}
+input{width:100%;padding:11px;border:1px solid #dbe2ea;border-radius:12px;font-size:16px;margin-top:5px}
+label{display:block;font-size:13px;color:#64748b;margin:11px 0 0}
+.progress{height:10px;background:#e5e7eb;border-radius:99px;overflow:hidden}.bar{height:100%;width:0;background:#111827}
+nav{position:sticky;bottom:12px;background:rgba(255,255,255,.92);backdrop-filter:blur(14px);padding:8px;border-radius:18px;display:grid;grid-template-columns:repeat(3,1fr);gap:6px;box-shadow:0 8px 30px rgba(15,23,42,.12)}
+nav button{margin:0;background:transparent;color:#64748b;font-size:13px;padding:9px}.active{background:#eef2ff!important;color:#111827!important}
+.tab{display:none}.tab.activeTab{display:block}
+.small{font-size:12px;color:#94a3b8}.good{font-weight:700}
+</style>
+</head>
+<body>
+<div class="app">
+<header><h1>MoneyPilot 💰</h1><p>你的財務人生駕駛艙</p></header>
+
+<section id="home" class="tab activeTab">
+<div class="card"><div class="grid">
+<div class="metric"><div class="label">淨資產</div><div class="value" id="net">NT$0</div></div>
+<div class="metric"><div class="label">每月餘額</div><div class="value" id="surplus">NT$0</div></div>
+<div class="metric"><div class="label">儲蓄率</div><div class="value" id="rate">0%</div></div>
+<div class="metric"><div class="label">負債</div><div class="value" id="debtView">NT$0</div></div>
+</div></div>
+<div class="card"><h2>財務健檢</h2><p id="advice">正在分析…</p></div>
+<div class="card"><h2>目前目標</h2><div class="row"><span>目標金額</span><b id="goal">NT$0</b></div><div class="row"><span>預計時間</span><b id="years">5 年</b></div><div class="progress"><div class="bar" id="bar"></div></div><p class="small" id="progressText"></p></div>
+</section>
+
+<section id="finance" class="tab">
+<div class="card"><h2>我的財務資料</h2>
+<label>月收入<input id="income" type="number" inputmode="decimal"></label>
+<label>每月支出<input id="expenses" type="number" inputmode="decimal"></label>
+<label>現金<input id="cash" type="number" inputmode="decimal"></label>
+<label>投資<input id="invest" type="number" inputmode="decimal"></label>
+<label>負債<input id="debt" type="number" inputmode="decimal"></label>
+<label>目標金額<input id="goalInput" type="number" inputmode="decimal"></label>
+<label>目標年數<input id="yearsInput" type="number" inputmode="decimal"></label>
+<button onclick="save()">儲存並分析</button>
+</div>
+<div class="card"><p class="small">資料目前只儲存在這台 iPhone 的瀏覽器本機，不會上傳伺服器。</p></div>
+</section>
+
+<section id="tools" class="tab">
+<div class="card"><h2>複利試算</h2>
+<label>目前本金<input id="principal" type="number" value="500000" inputmode="decimal"></label>
+<label>每月投入<input id="monthly" type="number" value="20000" inputmode="decimal"></label>
+<label>年化報酬率 (%)<input id="returnRate" type="number" value="7" step="0.1" inputmode="decimal"></label>
+<label>投資年數<input id="investYears" type="number" value="5" inputmode="decimal"></label>
+<button onclick="compound()">開始試算</button><h2 id="compoundResult" style="margin-top:16px">—</h2>
+</div>
+<div class="card"><h2>買房目標</h2><p>目前版本先把買房頭期款當作財務目標。下一版會加入房貸利率、貸款年限、成數與月付金。</p></div>
+</section>
+
+<nav>
+<button class="active" onclick="tab('home',this)">🏠<br>總覽</button>
+<button onclick="tab('finance',this)">💰<br>財務</button>
+<button onclick="tab('tools',this)">🧮<br>試算</button>
+</nav>
+</div>
+<script>
+const defaults={income:64000,expenses:35000,cash:100000,invest:500000,debt:300000,goal:3200000,years:5};
+let d=JSON.parse(localStorage.getItem('moneypilot')||'null')||defaults;
+function money(n){return new Intl.NumberFormat('zh-TW',{style:'currency',currency:'TWD',maximumFractionDigits:0}).format(n||0)}
+function sync(){for(const k of Object.keys(defaults)){const el=document.getElementById(k==='goal'?'goalInput':k);if(el)el.value=d[k]}}
+function render(){
+let surplus=d.income-d.expenses, rate=d.income?surplus/d.income:0, net=d.cash+d.invest-d.debt;
+document.getElementById('net').textContent=money(net);document.getElementById('surplus').textContent=money(surplus);
+document.getElementById('rate').textContent=Math.round(rate*100)+'%';document.getElementById('debtView').textContent=money(d.debt);
+document.getElementById('goal').textContent=money(d.goal);document.getElementById('years').textContent=d.years+' 年';
+let p=Math.min(Math.max(d.cash/d.goal,0),1);document.getElementById('bar').style.width=(p*100)+'%';
+document.getElementById('progressText').textContent='目前現金完成度 '+Math.round(p*100)+'%';
+let a=surplus<0?'目前支出高於收入，先把現金流轉正，再增加投資。':rate<.2?'目前儲蓄率約 '+Math.round(rate*100)+'%，建議先建立緊急預備金並降低高利率負債。':'目前儲蓄率約 '+Math.round(rate*100)+'%，現金流狀況不錯，可以依目標增加長期投資。';
+document.getElementById('advice').textContent=a;
+}
+function save(){d={income:+income.value||0,expenses:+expenses.value||0,cash:+cash.value||0,invest:+invest.value||0,debt:+debt.value||0,goal:+goalInput.value||0,years:+yearsInput.value||0};localStorage.setItem('moneypilot',JSON.stringify(d));render();alert('已儲存');}
+function tab(id,btn){document.querySelectorAll('.tab').forEach(x=>x.classList.remove('activeTab'));document.getElementById(id).classList.add('activeTab');document.querySelectorAll('nav button').forEach(x=>x.classList.remove('active'));btn.classList.add('active')}
+function compound(){let p=+principal.value||0,m=+monthly.value||0,r=(+returnRate.value||0)/100/12,n=(+investYears.value||0)*12;let fv=r? p*Math.pow(1+r,n)+m*((Math.pow(1+r,n)-1)/r):p+m*n;document.getElementById('compoundResult').textContent='預估資產：'+money(fv)}
+sync();render();
+</script>
+</body>
+</html>
